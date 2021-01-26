@@ -1,101 +1,98 @@
 const path = require("path");
 const express = require("express");
 const xss = require("xss");
-const NotesService = require("./notes-service");
-const notesRouter = express.Router();
-const jsonParser = express.json();
+const NoteService = require("./notes-service");
+const noteRouter = express.Router();
+const jsonBodyParser = express.json();
 
 const serializeNote = (note) => ({
-  //   id: note.id,
-  //   user_name: xss(need.user_name),
-  //   email: xss(need.email),
-  //   tampons: xss(need.tampons),
-  //   pads: xss(need.pads),
-  //   zipcode: xss(need.zipcode),
+  id: note.id,
+  name: xss(note.name),
+  content: xss(note.content),
+  folderid: note.folderid,
+  modified: note.modified,
 });
 
-notesRouter
+noteRouter
   .route("/")
   .get((req, res, next) => {
     const knexInstance = req.app.get("db");
-    NotesService.getAllNotes(knexInstance)
+    NoteService.getAllNotes(knexInstance)
       .then((notes) => {
         res.json(notes.map(serializeNote));
       })
       .catch(next);
   })
-  .post(jsonParser, (req, res, next) => {
-    const { user_name, email, pads, tampons, zipcode } = req.body;
-    const newInventory = { user_name, email, pads, tampons, zipcode };
+  .post(jsonBodyParser, (req, res, next) => {
+    const knexInstance = req.app.get("db");
+    const { name, content, folderid, modified } = req.body;
+    const newNote = { name, content, folderid };
 
-    for (const [key, value] of Object.entries(newInventory)) {
-      if (value == null) {
+    for (const [key, value] of Object.entries(newNote))
+      if (value == null)
         return res.status(400).json({
-          error: {
-            message: `Missing '${key}' in request body `,
-          },
+          error: { message: `Missing '${key}' in request body` },
         });
-      }
+
+    newNote.folderid = Number(folderid);
+
+    if (modified) {
+      newNote.modified = modified;
     }
-    InventoriesService.insertInventory(req.app.get("db"), newInventory)
-      .then((inventory) => {
+
+    NoteService.insertNote(knexInstance, newNote)
+      .then((note) => {
         res
           .status(201)
-          .location(`/inventories/${inventory.id}`)
-          .json(inventory);
+          .location(path.posix.join(req.originalUrl, `/${note.id}`))
+          .json(serializeNote(note));
       })
       .catch(next);
   });
-inventoriesRouter
-  .route("/:inventory_id")
+
+noteRouter
+  .route("/:id")
   .all((req, res, next) => {
-    InventoriesService.getById(req.app.get("db"), req.params.inventory_id)
-      .then((inventory) => {
-        if (!inventory) {
+    NoteService.getById(req.app.get("db"), req.params.id)
+      .then((note) => {
+        if (!note) {
           return res.status(404).json({
-            error: { message: "Inventory doesn't exist" },
+            error: { message: "Note does not exist" },
           });
         }
-        res.inventory = inventory;
+        res.note = note;
         next();
       })
       .catch(next);
   })
   .get((req, res, next) => {
-    res.json(serializeInventory(res.inventory));
+    res.json(serializeNote(res.note));
   })
   .delete((req, res, next) => {
-    InventoriesService.deleteInventory(
-      req.app.get("db"),
-      req.params.inventory_id
-    )
+    NoteService.deleteNote(req.app.get("db"), req.params.id)
       .then((numRowsAffected) => {
-        res.status(204).end();
+        return res.status(204).end();
       })
       .catch(next);
   })
-  .patch(jsonParser, (req, res, next) => {
-    const { user_name, email, tampons, pads, zipcode } = req.body;
-    const inventoryToUpdate = { user_name, email, tampons, pads, zipcode };
+  .patch(jsonBodyParser, (req, res, next) => {
+    const { name, content, modified } = req.body;
+    const newNoteFields = { name, content, modified };
 
-    const numberOfValues = Object.values(inventoryToUpdate).filter(Boolean)
-      .length;
-    if (numberOfValues === 0)
+    const numOfValues = Object.values(newNoteFields).filter(Boolean).length;
+    if (numOfValues === 0) {
       return res.status(400).json({
         error: {
-          message:
-            "Request body must contain  'user_name', 'email', 'pads','tampons','zipcode'",
+          message: "Your response must include: name, content",
         },
       });
-    InventoriesService.updateInventory(
-      req.app.get("db"),
-      req.params.inventory_id,
-      inventoryToUpdate
-    )
+    }
+
+    NoteService.updateNote(req.app.get("db"), req.params.id, newNoteFields)
       .then((numRowsAffected) => {
-        res.status(204).end();
+        return res.status(204).end();
       })
       .catch(next);
   });
 
-module.exports = inventoriesRouter;
+module.exports = noteRouter;

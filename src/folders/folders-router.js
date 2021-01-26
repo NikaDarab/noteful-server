@@ -1,7 +1,8 @@
 const path = require("path");
 const express = require("express");
 const xss = require("xss");
-const FoldersService = require("./folders-service");
+const FolderService = require("./folders-service");
+
 const foldersRouter = express.Router();
 const jsonParser = express.json();
 
@@ -14,7 +15,7 @@ foldersRouter
   .route("/")
   .get((req, res, next) => {
     const knexInstance = req.app.get("db");
-    FoldersService.getAllFolders(knexInstance)
+    FolderService.getAllFolders(knexInstance)
       .then((folders) => {
         res.json(folders.map(serializeFolder));
       })
@@ -33,7 +34,7 @@ foldersRouter
         });
       }
     }
-    FoldersService.insertFolder(req.app.get("db"), newFolder)
+    FolderService.insertFolder(req.app.get("db"), newFolder)
       .then((folder) => {
         res.status(201).location(`/folders/${folder.id}`).json(folder);
       })
@@ -42,7 +43,7 @@ foldersRouter
 foldersRouter
   .route("/:folder_id")
   .all((req, res, next) => {
-    FoldersService.getById(req.app.get("db"), req.params.folder_id)
+    FolderService.getById(req.app.get("db"), req.params.folder_id)
       .then((folder) => {
         if (!folder) {
           return res.status(404).json({
@@ -58,7 +59,7 @@ foldersRouter
     res.json(serializeFolder(res.folder));
   })
   .delete((req, res, next) => {
-    FoldersService.deleteFolder(req.app.get("db"), req.params.folder_id)
+    FolderService.deleteFolder(req.app.get("db"), req.params.folder_id)
       .then((numRowsAffected) => {
         res.status(204).end();
       })
@@ -75,7 +76,7 @@ foldersRouter
           message: "Request body must contain 'name' ",
         },
       });
-    FoldersService.updateFolder(
+    FolderService.updateFolder(
       req.app.get("db"),
       req.params.folder_id,
       folderToUpdate

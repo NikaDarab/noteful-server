@@ -7,7 +7,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const { NODE_ENV } = require("./config");
 const app = express();
-// const notesRouter = require("./notes/notes-router");
+const notesRouter = require("./notes/notes-router");
 const foldersRouter = require("./folders/folders-router");
 const { CLIENT_ORIGIN } = require("./config");
 const morganOption = NODE_ENV === "production" ? "tiny" : "common";
@@ -22,6 +22,7 @@ app.use(
 
 // app.use("/notes", notesRouter);
 app.use("/folders", foldersRouter);
+app.use("/notes", notesRouter);
 app.get("/", (req, res) => {
   res.send("Hello, world!!!");
 });
