@@ -9,7 +9,7 @@ const serializeNote = (note) => ({
   id: note.id,
   name: xss(note.name),
   content: xss(note.content),
-  folderid: note.folderid,
+  folderId: note.folderid,
   modified: note.modified,
 });
 
@@ -25,8 +25,8 @@ noteRouter
   })
   .post(jsonBodyParser, (req, res, next) => {
     const knexInstance = req.app.get("db");
-    const { name, content, folderid, modified } = req.body;
-    const newNote = { name, content, folderid };
+    const { name, content, folderId, modified } = req.body;
+    const newNote = { name, content };
 
     for (const [key, value] of Object.entries(newNote))
       if (value == null)
@@ -34,7 +34,7 @@ noteRouter
           error: { message: `Missing '${key}' in request body` },
         });
 
-    newNote.folderid = Number(folderid);
+    newNote.folderid = Number(folderId);
 
     if (modified) {
       newNote.modified = modified;

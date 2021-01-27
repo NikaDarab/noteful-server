@@ -33,6 +33,7 @@
     "posix": "^4.2.0",
     "postgrator": "^4.1.1",
     "supertest": "^6.1.1",
+    "uuid": "^8.3.2",
     "xss": "^1.0.8"
   },
   "devDependencies": {
